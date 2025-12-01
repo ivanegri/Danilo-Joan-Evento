@@ -147,9 +147,10 @@ def main():
             if selected_city != "Todas":
                 filtered_df = filtered_df[filtered_df['Cidade'] == selected_city]
 
-            # Mostrar apenas Nome e Cidade na tabela principal
+            # Mostrar apenas Nome e Cidade na tabela principal (oculto por padrão)
             display_cols = [col for col in ['Nome', 'Cidade'] if col in filtered_df.columns]
-            st.dataframe(filtered_df[display_cols], use_container_width=True, hide_index=True)
+            with st.expander("Mostrar lista de convidados", expanded=False):
+                st.dataframe(filtered_df[display_cols], use_container_width=True, hide_index=True)
 
             st.markdown("---")
             st.markdown("### ✏️ Atualizar Registro")
