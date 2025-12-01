@@ -35,42 +35,41 @@ SCOPES = [
 ]
 
 def authenticate_google_sheets():
-    """Autentica usando st.secrets do Streamlit ou arquivo local"""
-    import json
-    
+    """Autentica usando st.secrets do Streamlit (funciona em produção e localmente)"""
     try:
-        # Tenta usar st.secrets primeiro
-        if "gcp_service_account" in st.secrets:
-            service_account_info = st.secrets["gcp_service_account"]
-            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-            return gspread.authorize(creds)
+        # Verifica se a secret existe
+        if "gcp_service_account" not in st.secrets:
+            st.error("❌ Secret 'gcp_service_account' não encontrada")
+            st.info("""
+            **Para Streamlit Cloud:**
+            1. Acesse https://share.streamlit.io/
+            2. Clique em sua app → Settings → Secrets
+            3. Cole o seguinte (substitua pelos valores reais):
+            ```toml
+            [gcp_service_account]
+            type = "service_account"
+            project_id = "seu_project_id"
+            private_key_id = "sua_chave_id"
+            private_key = "sua_chave_privada"
+            client_email = "seu_email"
+            client_id = "seu_client_id"
+            auth_uri = "https://accounts.google.com/o/oauth2/auth"
+            token_uri = "https://oauth2.googleapis.com/token"
+            auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+            client_x509_cert_url = "seu_cert_url"
+            universe_domain = "googleapis.com"
+            ```
+            """)
+            return None
+        
+        # Carrega as credenciais
+        service_account_info = st.secrets["gcp_service_account"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+        return gspread.authorize(creds)
+        
     except Exception as e:
-        st.warning(f"Aviso ao tentar st.secrets: {e}")
-    
-    # Tenta carregar do arquivo TOML diretamente
-    try:
-        import toml
-        import os
-        secrets_path = os.path.join('.streamlit', 'secrets.toml')
-        if os.path.exists(secrets_path):
-            with open(secrets_path, 'r') as f:
-                config = toml.load(f)
-                if 'gcp_service_account' in config:
-                    service_account_info = config['gcp_service_account']
-                    creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-                    return gspread.authorize(creds)
-    except Exception as e:
-        pass
-    
-    # Se tudo falhar, mostra erro
-    st.error("❌ Erro: Não foi possível autenticar com Google Sheets")
-    st.info("""
-    **Opções de solução:**
-    1. Certifique-se de que `.streamlit/secrets.toml` existe e tem a seção `[gcp_service_account]`
-    2. Se está usando Streamlit Cloud, configure as secrets no painel da plataforma
-    3. Se está executando localmente, execute: `streamlit run app.py`
-    """)
-    return None
+        st.error(f"❌ Erro ao autenticar: {str(e)}")
+        return None
 
 def get_data(client, sheet_identifier):
     try:
