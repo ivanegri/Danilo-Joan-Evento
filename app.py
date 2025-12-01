@@ -35,19 +35,42 @@ SCOPES = [
 ]
 
 def authenticate_google_sheets():
-    """Autentica usando st.secrets do Streamlit"""
+    """Autentica usando st.secrets do Streamlit ou arquivo local"""
+    import json
+    
     try:
-        if "gcp_service_account" not in st.secrets:
-            st.error("❌ Erro: 'gcp_service_account' não encontrado em st.secrets")
-            st.info("Certifique-se de que o arquivo `.streamlit/secrets.toml` está configurado corretamente.")
-            return None
-        
-        service_account_info = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-        return gspread.authorize(creds)
+        # Tenta usar st.secrets primeiro
+        if "gcp_service_account" in st.secrets:
+            service_account_info = st.secrets["gcp_service_account"]
+            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+            return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"❌ Erro ao autenticar com Google Sheets: {e}")
-        return None
+        st.warning(f"Aviso ao tentar st.secrets: {e}")
+    
+    # Tenta carregar do arquivo TOML diretamente
+    try:
+        import toml
+        import os
+        secrets_path = os.path.join('.streamlit', 'secrets.toml')
+        if os.path.exists(secrets_path):
+            with open(secrets_path, 'r') as f:
+                config = toml.load(f)
+                if 'gcp_service_account' in config:
+                    service_account_info = config['gcp_service_account']
+                    creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+                    return gspread.authorize(creds)
+    except Exception as e:
+        pass
+    
+    # Se tudo falhar, mostra erro
+    st.error("❌ Erro: Não foi possível autenticar com Google Sheets")
+    st.info("""
+    **Opções de solução:**
+    1. Certifique-se de que `.streamlit/secrets.toml` existe e tem a seção `[gcp_service_account]`
+    2. Se está usando Streamlit Cloud, configure as secrets no painel da plataforma
+    3. Se está executando localmente, execute: `streamlit run app.py`
+    """)
+    return None
 
 def get_data(client, sheet_identifier):
     try:
