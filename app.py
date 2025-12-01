@@ -3,8 +3,6 @@ import gspread
 import pandas as pd
 from google.oauth2.service_account import Credentials
 import time
-
-# Configuração da Página
 st.set_page_config(
     page_title="Gestão de Eventos",
     page_icon="📅",
@@ -36,31 +34,20 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-import os
-import json
-import tempfile
-
 def authenticate_google_sheets():
-    """Autentica usando credentials.json local ou st.secrets (para deploy)"""
-    # Tenta usar st.secrets (Streamlit Cloud)
-    if "gcp_service_account" in st.secrets:
-        try:
-            service_account_info = st.secrets["gcp_service_account"]
-            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-            return gspread.authorize(creds)
-        except Exception as e:
-            st.error(f"Erro ao ler secrets: {e}")
+    """Autentica usando st.secrets do Streamlit"""
+    try:
+        if "gcp_service_account" not in st.secrets:
+            st.error("❌ Erro: 'gcp_service_account' não encontrado em st.secrets")
+            st.info("Certifique-se de que o arquivo `.streamlit/secrets.toml` está configurado corretamente.")
             return None
-
-    # Tenta usar arquivo local
-    if os.path.exists('credentials.json'):
-        try:
-            creds = Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
-            return gspread.authorize(creds)
-        except Exception as e:
-            st.error(f"Erro ao ler credentials.json: {e}")
-            return None
-    return None
+        
+        service_account_info = st.secrets["gcp_service_account"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"❌ Erro ao autenticar com Google Sheets: {e}")
+        return None
 
 def get_data(client, sheet_identifier):
     try:
@@ -87,8 +74,8 @@ def main():
         client = authenticate_google_sheets()
         
         if not client:
-            st.error("❌ Arquivo `credentials.json` não encontrado.")
-            st.info("Coloque o arquivo na pasta do projeto.")
+            st.error("❌ Falha na autenticação com Google Sheets.")
+            st.info("Verifique se o arquivo `.streamlit/secrets.toml` está corretamente configurado com as credenciais do Google Cloud.")
             return
 
         st.success("✅ Conectado ao Google Drive")
